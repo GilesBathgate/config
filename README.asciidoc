@@ -1,0 +1,2 @@
+This is just a useful script for setting up a new
+computer so that it is configured to my own liking
