@@ -25,8 +25,9 @@ function drawGrid() {
     for (let x = 0; x < gridSize; x++) {
       ctx.beginPath();
       ctx.rect(x * cellSize, y * cellSize, cellSize, cellSize);
-      ctx.fillStyle = grid[y][x] ? 'black' : 'white';
+      ctx.fillStyle = grid[y][x] ? 'white' : '#121212';
       ctx.fill();
+      ctx.strokeStyle = '#333333';
       ctx.stroke();
     }
   }
