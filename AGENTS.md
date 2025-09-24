@@ -157,3 +157,11 @@ The agent's current working directory (`pwd`) points to a path whose underlying 
 *   **Test:** A simple test is to try to change directory out of the current location and back to a known-good location. If `pwd` fails or `ls` in the current directory returns errors, this could be the cause.
 *   **Recovery Strategy:**
     *   **Reset CWD:** Reset the current working directory to a known-stable root and then return to the intended directory. The following command is effective: `cd / && cd /app`
+
+### Hypothesis 7: Writing to a Read-only Overlay Layer
+
+In an overlay file system, an agent might incorrectly use a path that points to the read-only base layer (e.g., under `/rom`) instead of the writable layer (e.g., under `/app`).
+
+*   **Test:** Attempting to write to a file using a path inside the read-only layer will fail with a "Read-only file system" error or similar permission error. A safe test is to use the `touch` command on a temporary file, e.g., `touch /rom/overlay/root/app/test_writable`. If this fails, the layer is not writable.
+*   **Recovery Strategy:**
+    *   **Use Correct Path:** Ensure all file write operations use the path in the writable layer (e.g., `/app`). Hard-coding or dynamically discovering the correct writable path is essential. Avoid using paths that include the read-only directory structure like `/rom`.
