@@ -165,3 +165,24 @@ In an overlay file system, an agent might incorrectly use a path that points to 
 *   **Test:** Attempting to write to a file using a path inside the read-only layer will fail with a "Read-only file system" error or similar permission error. A safe test is to use the `touch` command on a temporary file, e.g., `touch /rom/overlay/root/app/test_writable`. If this fails, the layer is not writable.
 *   **Recovery Strategy:**
     *   **Use Correct Path:** Ensure all file write operations use the path in the writable layer (e.g., `/app`). Hard-coding or dynamically discovering the correct writable path is essential. Avoid using paths that include the read-only directory structure like `/rom`.
+
+## User-Facing Diagnostic Guide
+
+If the agent stops responding, it may be due to a communication failure. Here are some steps you, the user, can take to diagnose the issue.
+
+### Step 1: Check External Factors
+*   **Check your Internet Connection:** Ensure your own connection is stable.
+*   **Check Service Status Page:** If a status page for the agent platform is available, check it for any ongoing incidents.
+
+### Step 2: Test the Agent's State
+You can try to communicate with the agent through a different channel to see if it is still "alive" and responsive.
+
+*   **Ask for a file:** Request that the agent create a file with a specific message. This tests if the agent can still perform actions.
+    *   **Example prompt:** "Please run the following command: `echo 'I am here and can run commands.' > /app/agent_status_test.txt`"
+    *   Then, you would need a way to verify if the file was created.
+
+*   **Ask for a shell echo:** Request that the agent use the `run_in_bash_session` tool with a simple `echo` command. The output of the shell command is a different communication channel than the `message_user` tool.
+    *   **Example prompt:** "Please run the following command: `echo 'Agent is responsive.'`"
+    *   If you see the output `Agent is responsive.`, you know the agent's core logic is still working, but the `message_user` tool specifically is failing.
+
+If these tests show the agent is still responsive, the issue likely lies with the infrastructure responsible for relaying messages.
