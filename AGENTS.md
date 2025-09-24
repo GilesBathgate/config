@@ -96,3 +96,64 @@ Special tools use a custom DSL syntax instead of a standard function call. The n
       # new code to be inserted
     >>>>>>> REPLACE
     ```
+
+## Diagnosing and Recovering from Tool Failures
+
+Tools can sometimes fail or produce contradictory results (e.g., `read_file` succeeds but `overwrite_file_with_block` fails on the same file). This is often due to the dynamic and stateful nature of the environment. Below are hypotheses for why such failures occur, along with tests to diagnose them and strategies for recovery.
+
+**Do not run these tests unless you are actively debugging a failure.**
+
+---
+
+### Hypothesis 1: Concurrency / Race Condition
+
+A separate process or operation modified the file between two tool calls.
+
+*   **Test:** Immediately before the failing command, run a verification command like `ls -l <filepath>`. Compare its output (e.g., existence, modification time) with the state before the original operation.
+*   **Recovery Strategy:**
+    1.  **Retry:** Attempt the entire operation again. The conflicting process may have been transient.
+    2.  **Re-evaluate:** If retries fail, re-scan the file system (`ls`) to get the current state and decide if the original goal is still achievable or needs a new plan.
+    3.  **Fail Gracefully:** If the situation cannot be resolved, inform the user why the action is no longer possible.
+
+### Hypothesis 2: Incorrect Permissions
+
+The agent has permission to perform one action (e.g., read) but not another (e.g., write).
+
+*   **Test:** Check file permissions using `ls -l <filepath>`. Analyze the permissions string (e.g., `-rw-r--r--`) to determine if the required permission (read, write, execute) is missing.
+*   **Recovery Strategy:**
+    1.  **Request Permissions:** Attempt to add the necessary permission, e.g., `run_in_bash_session` with `chmod u+w <filepath>`.
+    2.  **Inform User:** If changing permissions is not possible or advisable, report the issue to the user and ask for guidance.
+
+### Hypothesis 3: Working Directory Mismatch
+
+Tools are operating with different assumptions about the current working directory, causing relative paths to fail.
+
+*   **Test:** Retry the failing command using an absolute path to the file. You can find the absolute path using `pwd` or by running `find . -name <filename>`.
+*   **Recovery Strategy:**
+    *   **Use Absolute Paths:** Switch to using absolute paths for all file operations to remove ambiguity. This is the most robust solution.
+
+### Hypothesis 4: Tool Implementation Bug (e.g., Symlinks)
+
+A tool does not correctly handle a specific file system feature, like symbolic links.
+
+*   **Test:** Check if the path is a symbolic link using `ls -l <filepath>`. If the first character of the permissions string is `l`, it's a symlink.
+*   **Recovery Strategy:**
+    1.  **Use Canonical Path:** Read the link's target from the `ls -l` output and retry the operation on the canonical (real) file path directly.
+    2.  **Report Bug:** Make a note of the tool's specific limitation for future reference.
+
+### Hypothesis 5: Filesystem Caching or Delays
+
+In networked or virtual file systems, there can be a delay between a change being made and it becoming visible to all tools.
+
+*   **Test:** This is difficult to prove definitively. The simplest test is to introduce a short delay (`sleep 1`) and then retry the failing command. If it succeeds, it suggests a timing issue.
+*   **Recovery Strategy:**
+    1.  **Introduce Delays:** Add a small, deliberate delay before critical file operations.
+    2.  **Force Sync:** Attempt to force the file system to sync its caches by running the `sync` command in a bash session.
+
+### Hypothesis 6: "Ghost" Directory
+
+The agent's current working directory (`pwd`) points to a path whose underlying inode has been deleted by another process. Commands that rely on the CWD may fail with strange errors like "No such file or directory," even for absolute paths.
+
+*   **Test:** A simple test is to try to change directory out of the current location and back to a known-good location. If `pwd` fails or `ls` in the current directory returns errors, this could be the cause.
+*   **Recovery Strategy:**
+    *   **Reset CWD:** Reset the current working directory to a known-stable root and then return to the intended directory. The following command is effective: `cd / && cd /app`
