@@ -166,6 +166,16 @@ In an overlay file system, an agent might incorrectly use a path that points to 
 *   **Recovery Strategy:**
     *   **Use Correct Path:** Ensure all file write operations use the path in the writable layer (e.g., `/app`). Hard-coding or dynamically discovering the correct writable path is essential. Avoid using paths that include the read-only directory structure like `/rom`.
 
+### Hypothesis 8: OOM Killer Terminating Critical Processes
+
+When the system runs out of memory (e.g., during a large compilation), the kernel's Out-Of-Memory (OOM) Killer is invoked to terminate processes to prevent a total system crash.
+
+*   **Hypothesis:** The OOM Killer might not terminate the memory-intensive process (like a compiler). Instead, it could terminate a critical agent infrastructure process (e.g., the shell session manager, the communication service, or the agent's core process). This would lead to a catastrophic and likely unrecoverable failure of the agent session.
+*   **Test:** This is difficult and dangerous to test intentionally. The primary indicator would be a sudden, unexplained failure of the agent during a high-memory operation, often with a "Killed" message in the logs if a subprocess is terminated, or a complete loss of communication if a core process is killed.
+*   **Recovery Strategy:**
+    *   **Reduce Memory Usage:** The only reliable strategy is prevention. Reduce the memory footprint of operations. For compilations, this means reducing parallelism (e.g., `make -j2` or `make -j1` instead of `make -j4`).
+    *   **Monitor Memory:** Before starting a high-memory task, an agent could check available memory with `free -h` to assess the risk.
+
 ## User-Facing Diagnostic Guide
 
 If the agent stops responding, it may be due to a communication failure. Here are some steps you, the user, can take to diagnose the issue.
