@@ -186,3 +186,12 @@ You can try to communicate with the agent through a different channel to see if 
     *   If you see the output `Agent is responsive.`, you know the agent's core logic is still working, but the `message_user` tool specifically is failing.
 
 If these tests show the agent is still responsive, the issue likely lies with the infrastructure responsible for relaying messages.
+
+## Environment Limits and Specifications
+
+This section provides a high-level overview of the computational resources available in the agent's environment.
+
+*   **CPU:** 4 Cores
+*   **Memory (RAM):** ~8 GB
+*   **Storage:** 20 GB (on `/dev/vdb`, accessible via an overlay filesystem on `/`)
+*   **Swap:** No swap space is configured.
