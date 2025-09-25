@@ -173,7 +173,8 @@ When the system runs out of memory (e.g., during a large compilation), the kerne
 *   **Hypothesis:** The OOM Killer might not terminate the memory-intensive process (like a compiler). Instead, it could terminate a critical agent infrastructure process (e.g., the shell session manager, the communication service, or the agent's core process). This would lead to a catastrophic and likely unrecoverable failure of the agent session.
 *   **Test:** This is difficult and dangerous to test intentionally. The primary indicator would be a sudden, unexplained failure of the agent during a high-memory operation, often with a "Killed" message in the logs if a subprocess is terminated, or a complete loss of communication if a core process is killed.
 *   **Recovery Strategy:**
-    *   **Reduce Memory Usage:** The only reliable strategy is prevention. Reduce the memory footprint of operations. For compilations, this means reducing parallelism (e.g., `make -j2` or `make -j1` instead of `make -j4`).
+    *   **Reduce Memory Usage (Prevention):** The safest strategy is to reduce the memory footprint of operations. For compilations, this means reducing parallelism (e.g., `make -j2` or `make -j1` instead of `make -j4`).
+    *   **Enable Swap (Mitigation):** On many Linux systems, a swap file can be created and enabled on-the-fly to provide an emergency buffer for memory. This is a powerful mitigation strategy but may require `sudo` privileges. An agent could attempt this with commands like `sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile`.
     *   **Monitor Memory:** Before starting a high-memory task, an agent could check available memory with `free -h` to assess the risk.
 
 ## User-Facing Diagnostic Guide
