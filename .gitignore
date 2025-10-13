@@ -1,1 +1,6 @@
 build/
+*.o
+vector_add_cpu
+vector_add_gpu
+reduce_cpu
+reduce_gpu
