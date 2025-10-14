@@ -1,66 +1,117 @@
 #ifndef CUDA_H
 #define CUDA_H
 
-#include <stdio.h> // For fprintf
-#include <stdlib.h> // For exit
-
 #ifdef __NVCC__
-// --- NVCC Path ---
-// If compiling with nvcc, just include the real CUDA headers.
+
+// NVCC path: just include the real CUDA headers
 #include <cuda_runtime.h>
 
-// Real implementation of gpuAssert
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
-    if (code != cudaSuccess) {
-        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort) exit(code);
-    }
-}
-
 #else
-// --- g++ Path ---
-#include <cstddef> // For size_t
+
+// G++ path: mock everything
+#include <iostream>
+#include <vector>
+#include <numeric>
+#include <cassert>
+#include <coroutine>
 #include <cstring> // For memcpy
 
-// Mock for __global__ and __device__ specifiers
-#define __global__
+// Mock CUDA keywords
 #define __device__
-#define __shared__
-#define __syncthreads() (void)0
+#define __host__
+#define __global__
+#define __shared__ static
 
-// Mock enums for CUDA types
-typedef enum { cudaSuccess = 0 } cudaError_t;
-typedef enum { cudaMemcpyHostToDevice, cudaMemcpyDeviceToHost } cudaMemcpyKind;
+// Mock CUDA error handling
+using cudaError_t = int;
+const int cudaSuccess = 0;
 
-// Mock for the dim3 type
+// Mock memory management
+cudaError_t cudaMalloc(void** devPtr, size_t size) {
+    *devPtr = new char[size];
+    return cudaSuccess;
+}
+
+cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, int) {
+    memcpy(dst, src, count);
+    return cudaSuccess;
+}
+
+cudaError_t cudaFree(void* devPtr) {
+    delete[] static_cast<char*>(devPtr);
+    return cudaSuccess;
+}
+
+// Mock dim3 struct
 struct dim3 {
     unsigned int x, y, z;
-    dim3(unsigned int vx = 1, unsigned int vy = 1, unsigned int vz = 1) : x(vx), y(vy), z(vz) {}
 };
 
-// Mock function implementations
-inline cudaError_t cudaMalloc(void** devPtr, size_t size) { *devPtr = new char[size]; return cudaSuccess; }
-inline cudaError_t cudaFree(void* devPtr) { delete[] (char*)devPtr; return cudaSuccess; }
-inline cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, cudaMemcpyKind kind) { memcpy(dst, src, count); return cudaSuccess; }
-inline const char* cudaGetErrorString(cudaError_t error) { return "mock cudaSuccess"; }
+// Global thread/block variables for simulation
+dim3 threadIdx, blockIdx, blockDim;
 
-// Mock for built-in variables
-inline dim3 threadIdx;
-inline dim3 blockIdx;
-inline dim3 blockDim;
-inline dim3 gridDim;
+// --- Coroutine Machinery for __syncthreads() ---
 
-// Mock implementation of gpuAssert
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
-    if (code != cudaSuccess) {
-        fprintf(stderr, "GPUassert: mock error %d %s %d\n", code, file, line);
-        if (abort) exit(code);
+template <typename... Args>
+struct Task
+{
+    struct promise_type;
+private:
+    using handle = std::coroutine_handle<promise_type>;
+    handle handle_;
+    void (*coroutine_)(Args...);
+public:
+    Task(void (*coroutine)(Args...))
+    : coroutine_(coroutine)
+    {
     }
-}
+
+    void start(Args... args)
+    {
+        coroutine_(args...);
+        handle_ = handle::from_address(promise_type::current_address);
+        promise_type::current_address = nullptr;
+        handle_.resume(); // Start the coroutine until the first suspension
+    }
+
+    ~Task() {
+        if (handle_) {
+            handle_.destroy();
+        }
+    }
+
+    void resume() const { if (handle_) handle_.resume(); }
+    bool done() const { return handle_ && handle_.done(); }
+
+    struct promise_type
+    {
+        static auto initial_suspend() { return std::suspend_always(); }
+        static auto final_suspend() noexcept { return std::suspend_always(); }
+        static auto yield_value(int) noexcept { return std::suspend_always(); }
+        static void return_void() {}
+        static void unhandled_exception() { std::terminate(); }
+        static void* current_address;
+
+        void get_return_object()
+        {
+            current_address = handle::from_promise(*this).address();
+        }
+    };
+};
+
+template <typename... Args>
+void* Task<Args ...>::promise_type::current_address = nullptr;
+
+// Specialize coroutine_traits for void returning functions to use our Task's promise_type
+template <typename... Args>
+struct std::coroutine_traits<void, Args...> {
+   using promise_type = Task<Args...>::promise_type;
+};
+
+
+// The all-important mock for __syncthreads
+#define __syncthreads() co_yield 0
+
 #endif // __NVCC__
-
-// Error checking macro - available to both compilers
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-
 
 #endif // CUDA_H
