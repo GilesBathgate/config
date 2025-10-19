@@ -70,3 +70,22 @@ TEST_F(JobControlTest, FullLifecycle) {
     std::ifstream log_file_after(LOG_FILE);
     ASSERT_FALSE(log_file_after.is_open());
 }
+
+TEST_F(JobControlTest, StalePidFileMessage) {
+    std::ostringstream out, err;
+
+    // 1. Run a short-lived job
+    std::vector<std::string> run_args = {"run", "sleep", "1"};
+    run_aish(run_args, out, err);
+    ASSERT_TRUE(err.str().empty());
+
+    // 2. Wait for it to finish
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    // 3. Check status and verify the new message
+    out.str(""); err.str("");
+    std::vector<std::string> status_args = {"status"};
+    run_aish(status_args, out, err);
+    ASSERT_TRUE(err.str().empty());
+    ASSERT_NE(out.str().find("has already finished and ran for"), std::string::npos);
+}

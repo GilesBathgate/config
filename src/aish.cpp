@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <chrono>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -12,6 +13,25 @@
 #include <csignal>
 #include <cstring>
 #include <cerrno>
+
+// Helper function to calculate the duration of a finished job
+long get_job_duration() {
+    struct stat pid_stat, log_stat;
+
+    if (stat(PID_FILE.c_str(), &pid_stat) != 0) {
+        return -1; // PID file not found
+    }
+
+    if (stat(LOG_FILE.c_str(), &log_stat) != 0) {
+        return -1; // Log file not found
+    }
+
+    auto start_time = std::chrono::system_clock::from_time_t(pid_stat.st_mtime);
+    auto end_time = std::chrono::system_clock::from_time_t(log_stat.st_mtime);
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
+
+    return duration.count();
+}
 
 // Helper function to check if a process is running (and not a zombie)
 bool is_process_running(pid_t pid) {
@@ -117,8 +137,16 @@ void command_status(const std::vector<std::string>& args, std::ostream& out, std
     pid_file.close();
 
     if (!is_process_running(pid)) {
-        err << "Stale PID file found for stopped process " << pid << ". Cleaning up." << std::endl;
+        long duration = get_job_duration();
+        if (duration < 0) {
+            out << "The process " << pid << " has already finished." << std::endl;
+        } else if (duration > 86400) { // 24 hours
+            out << "The process " << pid << " has already finished and ran for a very long time" << std::endl;
+        } else {
+            out << "The process " << pid << " has already finished and ran for " << duration << "s" << std::endl;
+        }
         remove(PID_FILE.c_str());
+        remove(LOG_FILE.c_str());
         return;
     }
 
@@ -158,8 +186,16 @@ void command_stop(const std::vector<std::string>& args, std::ostream& out, std::
     pid_file.close();
 
     if (!is_process_running(pid)) {
-        err << "Stale PID file found for stopped process " << pid << ". Cleaning up." << std::endl;
+        long duration = get_job_duration();
+        if (duration < 0) {
+            out << "The process " << pid << " has already finished." << std::endl;
+        } else if (duration > 86400) { // 24 hours
+            out << "The process " << pid << " has already finished and ran for a very long time" << std::endl;
+        } else {
+            out << "The process " << pid << " has already finished and ran for " << duration << "s" << std::endl;
+        }
         remove(PID_FILE.c_str());
+        remove(LOG_FILE.c_str());
         return;
     }
 
