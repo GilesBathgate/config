@@ -26,10 +26,15 @@ FetchContent_MakeAvailable(googletest)
 # Enable testing
 enable_testing()
 
-# Add test executable
-add_executable(aish_tests tests/AishTests.cpp)
-target_link_libraries(aish_tests PRIVATE GTest::gtest_main aish_lib)
+# Add test executable for core features
+add_executable(aish_core_tests tests/AishTests.cpp)
+target_link_libraries(aish_core_tests PRIVATE GTest::gtest_main aish_lib)
 
-# Add test
+# Add test executable for job control
+add_executable(aish_job_control_tests tests/JobControlTests.cpp)
+target_link_libraries(aish_job_control_tests PRIVATE GTest::gtest_main aish_lib)
+
+# Add tests
 include(GoogleTest)
-gtest_discover_tests(aish_tests)
+gtest_discover_tests(aish_core_tests)
+gtest_discover_tests(aish_job_control_tests)
