@@ -1,25 +1,34 @@
 #ifndef AISH_HPP
 #define AISH_HPP
 
+#include <span>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <iostream>
+
+// Helper function (exposed for testing)
+bool is_process_running(pid_t pid);
 
 // Constants for job control
 const std::string PID_FILE = "/tmp/aish.pid";
 const std::string LOG_FILE = "/tmp/aish.log";
 
-// Function to handle the echo command
-void command_echo(const std::vector<std::string>& args, std::ostream& out, std::ostream& err);
+// A custom exception type for aish errors
+class AishException : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
 
-// Job control commands
-void command_run(const std::vector<std::string>& args, std::ostream& out, std::ostream& err);
-void command_status(const std::vector<std::string>& args, std::ostream& out, std::ostream& err);
-void command_stop(const std::vector<std::string>& args, std::ostream& out, std::ostream& err);
-void command_monitor(const std::vector<std::string>& args, std::ostream& out, std::ostream& err);
+using CommandArgs = std::span<const std::string>;
 
+// Command functions now return their output as a string and throw exceptions on error.
+std::string command_echo(CommandArgs args);
+std::string command_run(CommandArgs args);
+std::string command_status(CommandArgs args);
+std::string command_stop(CommandArgs args);
+std::string command_monitor(CommandArgs args);
 
 // Main logic for dispatching commands
-int run_aish(const std::vector<std::string>& args, std::ostream& out = std::cout, std::ostream& err = std::cerr);
+std::string run_aish(CommandArgs args);
 
 #endif // AISH_HPP

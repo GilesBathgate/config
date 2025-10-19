@@ -4,30 +4,29 @@
 #include <thread>
 #include <chrono>
 #include <sys/wait.h>
+#include <regex>
+#include <filesystem>
 
 class JobControlTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Ensure no leftover files from previous runs
-        remove(PID_FILE.c_str());
-        remove(LOG_FILE.c_str());
+        std::filesystem::remove(PID_FILE);
+        std::filesystem::remove(LOG_FILE);
     }
 
     void TearDown() override {
         // Clean up after each test
-        remove(PID_FILE.c_str());
-        remove(LOG_FILE.c_str());
+        std::filesystem::remove(PID_FILE);
+        std::filesystem::remove(LOG_FILE);
     }
 };
 
 TEST_F(JobControlTest, FullLifecycle) {
-    std::ostringstream out, err;
-
     // 1. Run a job
     std::vector<std::string> run_args = {"run", "sleep", "30"};
-    run_aish(run_args, out, err);
-    ASSERT_TRUE(err.str().empty());
-    ASSERT_FALSE(out.str().empty());
+    std::string output = run_aish(run_args);
+    ASSERT_NE(output.find("Started job 'sleep' with PID"), std::string::npos);
 
     // 2. Check PID file
     std::ifstream pid_file(PID_FILE);
@@ -39,53 +38,39 @@ TEST_F(JobControlTest, FullLifecycle) {
     ASSERT_GT(pid, 0);
     ASSERT_EQ(cmd, "sleep");
 
-    // 3. Check status
-    out.str(""); err.str("");
+    // 3. Check status with regex for the time
     std::vector<std::string> status_args = {"status"};
-    run_aish(status_args, out, err);
-    ASSERT_TRUE(err.str().empty());
-    ASSERT_NE(out.str().find("'sleep' (pid: " + std::to_string(pid) + ") has been running for"), std::string::npos);
+    output = run_aish(status_args);
+    std::regex status_regex("'sleep' \\(pid: \\d+\\) has been running for \\d{2}:\\d{2}:\\d{2}");
+    ASSERT_TRUE(std::regex_search(output, status_regex));
 
-    // 4. Try to run another job (should fail)
-    out.str(""); err.str("");
-    run_aish(run_args, out, err);
-    ASSERT_FALSE(err.str().empty());
-    ASSERT_EQ(err.str(), "Error: A job is already running (pid: " + std::to_string(pid) + ").\n");
-
+    // 4. Try to run another job (should throw)
+    ASSERT_THROW(run_aish(run_args), AishException);
 
     // 5. Stop the job
-    out.str(""); err.str("");
     std::vector<std::string> stop_args = {"stop"};
-    run_aish(stop_args, out, err);
-    ASSERT_TRUE(err.str().empty()) << "stderr was: " << err.str();
+    output = run_aish(stop_args);
+    ASSERT_NE(output.find("stopped gracefully"), std::string::npos);
 
     // 6. Verify job is stopped and files are cleaned up
     int status;
-    waitpid(pid, &status, 0); // Reap the zombie process
-
-    ASSERT_EQ(kill(pid, 0), -1);
-    ASSERT_EQ(errno, ESRCH);
-    std::ifstream pid_file_after(PID_FILE);
-    ASSERT_FALSE(pid_file_after.is_open());
-    std::ifstream log_file_after(LOG_FILE);
-    ASSERT_FALSE(log_file_after.is_open());
+    waitpid(pid, &status, 0); // Reap the zombie
+    ASSERT_FALSE(is_process_running(pid));
+    ASSERT_FALSE(std::filesystem::exists(PID_FILE));
+    ASSERT_FALSE(std::filesystem::exists(LOG_FILE));
 }
 
 TEST_F(JobControlTest, StalePidFileMessage) {
-    std::ostringstream out, err;
-
     // 1. Run a short-lived job
     std::vector<std::string> run_args = {"run", "sleep", "1"};
-    run_aish(run_args, out, err);
-    ASSERT_TRUE(err.str().empty());
+    run_aish(run_args);
 
     // 2. Wait for it to finish
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // 3. Check status and verify the new message
-    out.str(""); err.str("");
     std::vector<std::string> status_args = {"status"};
-    run_aish(status_args, out, err);
-    ASSERT_TRUE(err.str().empty());
-    ASSERT_NE(out.str().find("has already finished and ran for"), std::string::npos);
+    std::string output = run_aish(status_args);
+    std::regex stale_regex("The process \\d+ has already finished and ran for \\d{2}:\\d{2}:\\d{2}");
+    ASSERT_TRUE(std::regex_search(output, stale_regex));
 }
