@@ -1,1 +1,3 @@
-build/
+document.txt
+translated_document.txt
+images/*.ppm
