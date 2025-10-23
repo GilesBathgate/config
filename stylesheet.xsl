@@ -95,7 +95,9 @@
   </xsl:template>
 
   <xsl:template match="code">
-    <fo:block font-family="monospace" font-size="10pt" background-color="#f0f0f0" padding="5px" space-after="0.5cm">
+    <fo:block font-family="monospace" font-size="10pt" background-color="#f0f0f0"
+              padding="5px" space-after="0.5cm" white-space-treatment="preserve"
+              white-space-collapse="false" linefeed-treatment="preserve">
       <xsl:value-of select="."/>
     </fo:block>
   </xsl:template>

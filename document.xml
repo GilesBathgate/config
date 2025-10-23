@@ -168,6 +168,7 @@
     </section>
     <section>
       <title>2. Communication and Output Interface</title>
+      <img src="images/image-000.png" width="796" height="509" x-ppi="425" y-ppi="425"/>
       <p>Terminal number: Facing the terminal, the bottom row from left to right is 12345, the top row from left to right is 6 7 8 9 10.</p>
       <table>
         <row>
@@ -269,7 +270,7 @@
     <title>III. Driver Wiring Diagram and Control Method</title>
     <section>
       <title>1. Typical Driver Wiring Diagram</title>
-      <img src="images/image-000.jpg" width="769" height="509" x-ppi="425" y-ppi="425"/>
+      <img src="images/image-001.png" width="2048" height="1630" x-ppi="274" y-ppi="274"/>
     </section>
     <section>
       <title>2. Command Pulse + Direction Position Control Mode</title>
@@ -288,9 +289,9 @@
       <title>3. Orthogonal Command Pulse Position Control Mode</title>
       <p>By setting the special function (address 0x19) to 2 and re-powering, it will be in encoder following mode. This mode can be used for encoder following. For example, if a shaft is connected to an encoder, connect the encoder output to the driver (wiring method as in the typical driver wiring diagram), and the driver can control the servo motor to follow the input encoder signal. The ratio of the control encoder to the motor rotation angle can be set by adjusting the electronic gear.</p>
       <p>Forward pulse:</p>
-      <img src="images/image-001.jpg" width="2048" height="1630" x-ppi="274" y-ppi="274"/>
+      <img src="images/image-003.png" width="410" height="103" x-ppi="96" y-ppi="96"/>
       <p>Reverse pulse:</p>
-      <img src="images/image-002.png" width="2048" height="1630" x-ppi="274" y-ppi="274"/>
+      <img src="images/image-004.png" width="410" height="103" x-ppi="96" y-ppi="96"/>
       <p>Motor rotation direction: PU rising edge leads DIR rising edge for forward rotation. PU rising edge lags DIR rising edge for reverse rotation.</p>
     </section>
   </chapter>
@@ -346,7 +347,7 @@
       <p>Parameter save send 1 (if you need to automatically find the mechanical origin after re-powering, you can save this parameter)</p>
       <p>After re-powering, it will automatically reverse until there is an EN signal, and then the motor will forward rotate to the encoder origin as the origin. (The DIR polarity is 1 or 0 to set the direction of origin search)</p>
       <p>The origin switch needs to be connected to the EN signal. The wiring diagram is as follows:</p>
-      <img src="images/image-003.jpg" width="410" height="103" x-ppi="96" y-ppi="96"/>
+      <img src="images/image-005.png" width="789" height="472" x-ppi="109" y-ppi="109"/>
     </section>
     <section>
       <title>8. Clear Position by Communication Method</title>
@@ -362,7 +363,7 @@
     <title>V. Modbus Control Method</title>
     <section>
       <title>1. Hardware Connection</title>
-      <img src="images/image-004.jpg" width="410" height="103" x-ppi="96" y-ppi="96"/>
+      <img src="images/image-006.png" width="509" height="311" x-ppi="89" y-ppi="89"/>
       <p>The internal 485 of the driver is isolated by optocouplers, which solves the problem of a host being easily interfered with and damaged when connected to multiple slaves.</p>
     </section>
     <section>
@@ -713,7 +714,7 @@ unsigned short CRC16(unsigned char *puchMsg, unsigned short usDataLen)
     <title>VI. Host Computer Software User Manual</title>
     <section>
       <p>This driver provides a host computer software for monitoring and testing the driver. You can view and set the internal parameters of the driver through the software.</p>
-      <img src="images/image-005.jpg" width="789" height="472" x-ppi="109" y-ppi="109"/>
+      <img src="images/image-007.png" width="958" height="640" x-ppi="132" y-ppi="132"/>
       <p>As shown in the figure above, the software is divided into several parts such as waveform display and motor running parameters. The functions and roles of each part are introduced below.</p>
       <p>Waveform display: There are 4 channels in total, represented by 4 colors. The colors are the same as the font colors in the motor running parameters. That is: blue represents current, green represents the output pulse width, red represents the current speed, and black represents voltage.</p>
       <p>Motor running parameters: displays the real-time data of the motor's operation.</p>
